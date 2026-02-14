@@ -395,7 +395,7 @@ function ENT:Initialize()
 	self.FOV = nil -- The FOV of the player's view. (By default, do not change the FOV.)
 	self.FLIR = false -- Whether infrared view is turned on.
 
-	self.Position = Vector(0,0,0)
+	self.CameraPosition = Vector(0,0,0)
 	self.Angle = Angle(0,0,0)
 	self.Distance = 0
 	self.MaxDistance = 16000
@@ -502,7 +502,7 @@ function ENT:SyncSettings( ply, active )
 			net.WriteBit( self.AutoUnclip_IgnoreWater )
 			net.WriteBit( self.DrawPlayer )
 			net.WriteBit( self.DrawParent )
-			SendPositions( self.Position, self.Angle, self.Distance, self.Parent, self.UnRoll, self.MaxDistance )
+			SendPositions( self.CameraPosition, self.Angle, self.Distance, self.Parent, self.UnRoll, self.MaxDistance )
 		end
 	net.Send( ply )
 end
@@ -513,7 +513,7 @@ function ENT:SyncPositions( ply )
 	if not IsValid(ply) then ply = self.Players end
 	net.Start( "wire_camera_controller_sync", true )
 		net.WriteEntity( self )
-		SendPositions( self.Position, self.Angle, self.Distance, self.Parent, self.UnRoll, self.MaxDistance )
+		SendPositions( self.CameraPosition, self.Angle, self.Distance, self.Parent, self.UnRoll, self.MaxDistance )
 	net.Send( ply )
 end
 
@@ -557,7 +557,7 @@ function ENT:UpdateOutputs()
 		local parent = self.Parent
 		local HasParent = IsValid( parent )
 
-		local pos, ang = self.Position, self.Angle
+		local pos, ang = self.CameraPosition, self.Angle
 
 		local curpos = pos
 		local curang = ang
@@ -831,10 +831,10 @@ function ENT:LocalizePositions(b)
 	if IsValid( self.Parent ) then
 		local parent = self.Parent
 		if b then
-			self.Position = parent:WorldToLocal( self.Position )
+			self.CameraPosition = parent:WorldToLocal( self.CameraPosition )
 			self.Angle = parent:WorldToLocalAngles( self.Angle )
 		else
-			self.Position = parent:LocalToWorld( self.Position )
+			self.CameraPosition = parent:LocalToWorld( self.CameraPosition )
 			self.Angle = parent:LocalToWorldAngles( self.Angle )
 		end
 	end
@@ -870,7 +870,7 @@ function ENT:TriggerInput( name, value )
 		if name == "Parent" then
 			self.Parent = value
 		elseif name == "Position" then
-			self.Position = value
+			self.CameraPosition = value
 		elseif name == "Distance" then
 			self.Distance = value
 		elseif name == "MaxDistance" then
@@ -882,11 +882,11 @@ function ENT:TriggerInput( name, value )
 		elseif name == "Angle" then
 			self.Angle = value
 		elseif name == "X" then
-			self.Position.x = value
+			self.CameraPosition.x = value
 		elseif name == "Y" then
-			self.Position.y = value
+			self.CameraPosition.y = value
 		elseif name == "Z" then
-			self.Position.z = value
+			self.CameraPosition.z = value
 		elseif name == "Pitch" then
 			self.Angle.p = value
 		elseif name == "Yaw" then
