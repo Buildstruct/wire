@@ -101,6 +101,8 @@ function Editor:Init()
 	self.MinimapSize = 200
 	self.MinimapPadding = 10
 	self.MinimapAlpha = 200
+	self.MinimapBackgroundColor = Color(20, 20, 20, self.MinimapAlpha)
+	self.MinimapBorderColor = Color(60, 60, 60, self.MinimapAlpha)
 
 	self.Animations = {}
 	self.LastFrameTime = SysTime()
@@ -1360,10 +1362,10 @@ function Editor:PaintMinimap()
 	local y = self:GetTall() - size - padding
 
 	-- Background
-	draw.RoundedBox(4, x, y, size, size, Color(20, 20, 20, self.MinimapAlpha))
+	draw.RoundedBox(4, x, y, size, size, self.MinimapBackgroundColor)
 
 	-- Border
-	surface.SetDrawColor(Color(60, 60, 60, self.MinimapAlpha))
+	surface.SetDrawColor(self.MinimapBorderColor)
 	surface.DrawOutlinedRect(x, y, size, size)
 
 	-- Calculate bounds of all nodes
@@ -1401,7 +1403,7 @@ function Editor:PaintMinimap()
 		surface.DrawRect(nx - nodeSize/2, ny - nodeSize/2, nodeSize, nodeSize)
 	end
 
-	-- Draw viewport rectangle
+	-- Draw viewport rectangle with clipping
 	local viewW = (self:GetWide() - 300) / self.Zoom
 	local viewH = self:GetTall() / self.Zoom
 	local vx = x + 10 + (self.Position[1] - minX + 100 - viewW/2) * scale
@@ -1409,9 +1411,50 @@ function Editor:PaintMinimap()
 	local vw = viewW * scale
 	local vh = viewH * scale
 
-	surface.SetDrawColor(self.SelectedNodeColor)
-	surface.DrawOutlinedRect(vx, vy, vw, vh)
-	surface.DrawOutlinedRect(vx + 1, vy + 1, vw - 2, vh - 2)
+	local minimapLeft = x + 10
+	local minimapTop = y + 10
+	local minimapRight = x + size - 10
+	local minimapBottom = y + size - 10
+
+	local viewLeft = vx
+	local viewTop = vy
+	local viewRight = vx + vw
+	local viewBottom = vy + vh
+
+	local hasIntersection = not (viewRight < minimapLeft or 
+								viewLeft > minimapRight or 
+								viewBottom < minimapTop or 
+								viewTop > minimapBottom)
+
+	if hasIntersection then
+		local clippedLeft = math.max(viewLeft, minimapLeft)
+		local clippedTop = math.max(viewTop, minimapTop)
+		local clippedRight = math.min(viewRight, minimapRight)
+		local clippedBottom = math.min(viewBottom, minimapBottom)
+		
+		local clippedVx = clippedLeft
+		local clippedVy = clippedTop
+		local clippedVw = clippedRight - clippedLeft
+		local clippedVh = clippedBottom - clippedTop
+		
+		-- Draw clipped viewport rectangle
+		if clippedVw > 0 and clippedVh > 0 then
+			surface.SetDrawColor(self.SelectedNodeColor)
+			surface.DrawOutlinedRect(clippedVx, clippedVy, clippedVw, clippedVh)
+			if clippedVw > 2 and clippedVh > 2 then
+				surface.DrawOutlinedRect(clippedVx + 1, clippedVy + 1, clippedVw - 2, clippedVh - 2)
+			end
+		end
+	else
+		-- Camera is outside minimap bounds - show direction indicator
+		local viewCenterX = vx + vw / 2
+		local viewCenterY = vy + vh / 2
+		local circleX = math.Clamp(viewCenterX, minimapLeft, minimapRight)
+		local circleY = math.Clamp(viewCenterY, minimapTop, minimapBottom)
+		
+		surface.SetDrawColor(self.SelectedNodeColor)
+		self:DrawCircle(circleX, circleY, 5, 16)
+	end
 end
 
 --------------------------------------------------------
