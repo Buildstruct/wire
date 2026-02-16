@@ -275,7 +275,7 @@ function ENT:SynthesizeViewData(data)
 			if connection.waypoints and #connection.waypoints > 0 then
 				edgeData.w = {}
 				for _, wp in ipairs(connection.waypoints) do
-					table.insert(edgeData.w, {math.Round(wp[1]), math.Round(wp[2])})
+					table.insert(edgeData.w, {math.Round(wp[1] + FPGANodeSize / 2), math.Round(wp[2] + FPGANodeSize / 2)})
 				end
 			end
 			
