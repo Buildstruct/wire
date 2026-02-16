@@ -1497,7 +1497,6 @@ function Editor:Paint()
 			gx, gy = self:AlignPosToGrid(gx, gy)
 		end
 
-
 		local cx, cy = self.Nodes[self.DraggingNode].x, self.Nodes[self.DraggingNode].y
 		local dx, dy = gx - cx, gy - cy -- Calculate movement delta
 
@@ -1521,10 +1520,19 @@ function Editor:Paint()
 					local inputMoved = movedNodes[nodeId]
 					local outputMoved = movedNodes[outputNodeId]
 
-					-- Only move waypoints if BOTH ends are moving together
-					if inputMoved and outputMoved and connection.waypoints then
+					if connection.waypoints then
 						for i, wp in ipairs(connection.waypoints) do
-							connection.waypoints[i] = {wp[1] + dx, wp[2] + dy}
+							local wpKey = self:GetConnectionKey(nodeId, inputNum)
+							local wpSelKey = self:GetWaypointSelectionKey(wpKey, i)
+
+							-- Move waypoint if it's selected OR if both ends are moving
+							if self.SelectedWaypoints[wpSelKey] then
+								-- Selected waypoint: move it by delta
+								connection.waypoints[i] = {wp[1] + dx, wp[2] + dy}
+							elseif inputMoved and outputMoved then
+								-- Both ends moving but waypoint not selected: move it too
+								connection.waypoints[i] = {wp[1] + dx, wp[2] + dy}
+							end
 						end
 					end
 				end
@@ -1533,18 +1541,6 @@ function Editor:Paint()
 			self.SelectedNodes = {}
 			self.Nodes[self.DraggingNode].x = gx
 			self.Nodes[self.DraggingNode].y = gy
-
-			-- Update waypoints for connections involving this single node
-			local draggedNodeId = self.DraggingNode
-			for nodeId, node in pairs(self.Nodes) do
-				for inputNum, connection in pairs(node.connections) do
-					local outputNodeId = connection[1]
-
-					-- Only move waypoints if BOTH ends are the same node (shouldn't happen but safe check)
-					-- For single node, we don't move waypoints since only one end moves
-					-- This is intentional - waypoints stay fixed when only one node moves
-				end
-			end
 		end
 	end
 	-- NEW: moving waypoint(s)
@@ -2150,21 +2146,24 @@ function Editor:OnMousePressed(code)
 			self:SaveState("Move Waypoint(s)")
 			self.DraggingWaypoint = {wpKey, wpIndex}
 			return
-		else
-			-- Clear waypoint selection if clicking elsewhere (and not holding Ctrl)
-			if not control then
-				self.SelectedWaypoints = {}
-				self.SelectedWaypointCount = 0
-			end
+		end
+
+		-- Check for node BEFORE clearing waypoints
+		local nodeId = self:GetNodeAt(x, y)
+
+		-- Clear waypoint selection only if NOT clicking on a node and NOT holding Ctrl
+		if not nodeId and not control then
+			self.SelectedWaypoints = {}
+			self.SelectedWaypointCount = 0
 		end
 
 		--NODE DRAGGING
-		local nodeId = self:GetNodeAt(x, y)
 		if nodeId then
 			self:SaveState("Move Node") -- Save BEFORE dragging starts
 			self.DraggingNode = nodeId
 			local gx, gy = self:ScrToPos(x, y)
 			self.DraggingOffset = { self.Nodes[nodeId].x - gx, self.Nodes[nodeId].y - gy }
+
 		else
 			--CONNECTION DRAWING
 			local nodeId, inputNum = self:GetNodeInputAt(x, y)
