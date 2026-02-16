@@ -857,6 +857,12 @@ function Editor:InitControlPanel(frame)
 		self:GetParent():SetWorldClicker(bVal)
 	end
 
+	local Minimap = vgui.Create("DCheckBoxLabel")
+	dlist:AddItem(Minimap)
+	Minimap:SetConVar("wire_fpga_editor_minimap")
+	Minimap:SetText("Show minimap")
+	Minimap:SizeToContents()
+	Minimap:SetTooltip("Enable or disable the minimap in the editor.")
 	--------------------------------------------- FPGA TAB
 	sheet = self:AddControlPanelTab("FPGA", "icon16/computer.png", "Options for FPGA.")
 

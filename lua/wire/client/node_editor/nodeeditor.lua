@@ -97,10 +97,11 @@ function Editor:Init()
 	self.MaxUndoSteps = 50
 	self.UndoEnabled = true
 
-	self.MinimapEnabled = true
+	self.MinimapConVar = CreateClientConVar("wire_fpga_editor_minimap", "1", true, false)
 	self.MinimapSize = 200
 	self.MinimapPadding = 10
 	self.MinimapAlpha = 200
+	self.MinimapConnectionAlpha = 50
 	self.MinimapBackgroundColor = Color(20, 20, 20, self.MinimapAlpha)
 	self.MinimapBorderColor = Color(60, 60, 60, self.MinimapAlpha)
 
@@ -1354,7 +1355,7 @@ function Editor:PaintHelp()
 end
 
 function Editor:PaintMinimap()
-	if not self.MinimapEnabled or #self.Nodes == 0 then return end
+	if not self.MinimapConVar:GetBool() or #self.Nodes == 0 then return end
 
 	local size = self.MinimapSize
 	local padding = self.MinimapPadding
@@ -1374,6 +1375,7 @@ function Editor:PaintMinimap()
 	local minY, maxY = math.huge, -math.huge
 
 	for _, node in pairs(self.Nodes) do
+		if node.visual == "comment" then continue end
 		if node.x then
 			minX = math.min(minX, node.x)
 			maxX = math.max(maxX, node.x)
@@ -1388,19 +1390,65 @@ function Editor:PaintMinimap()
 
 	-- Draw nodes on minimap
 	for nodeId, node in pairs(self.Nodes) do
-		if not node.x then continue end
+		if not node.x or node.visual == "comment" then continue end
 
 		local nx = x + 10 + (node.x - minX + 100) * scale
 		local ny = y + 10 + (node.y - minY + 100) * scale
 		local nodeSize = 3
 
-		if self.SelectedNodes[nodeId] then
-			surface.SetDrawColor(self.SelectedNodeColor)
-		else
-			surface.SetDrawColor(self.NodeColor)
+		for inputNum, connectedTo in pairs(node.connections) do
+			local outputNodeId = connectedTo[1]
+			local outputNum = connectedTo[2]
+			local outputNode = self.Nodes[outputNodeId]
+
+			if outputNode then
+				local x1 = x + 10 + (outputNode.x - minX + 100) * scale
+				local y1 = y + 10 + (outputNode.y - minY + 100) * scale
+				local x2 = x + 10 + (node.x - minX + 100) * scale
+				local y2 = y + 10 + (node.y - minY + 100) * scale
+
+				local color = ColorAlpha(FPGATypeColor[getInputType(getGate(node), inputNum)], self.MinimapConnectionAlpha)
+
+				-- Draw connection with waypoints
+				if connectedTo.waypoints and #connectedTo.waypoints > 0 then
+					local wx1 = x + 10 + (connectedTo.waypoints[1][1] - minX + 100) * scale
+					local wy1 = y + 10 + (connectedTo.waypoints[1][2] - minY + 100) * scale
+					self:DrawBezierCurve(x1, y1, wx1, wy1, color, 8)
+
+					for i = 1, #connectedTo.waypoints - 1 do
+						local wx1 = x + 10 + (connectedTo.waypoints[i][1] - minX + 100) * scale
+						local wy1 = y + 10 + (connectedTo.waypoints[i][2] - minY + 100) * scale
+						local wx2 = x + 10 + (connectedTo.waypoints[i+1][1] - minX + 100) * scale
+						local wy2 = y + 10 + (connectedTo.waypoints[i+1][2] - minY + 100) * scale
+						self:DrawBezierCurve(wx1, wy1, wx2, wy2, color, 8)
+					end
+
+					local wxLast = x + 10 + (connectedTo.waypoints[#connectedTo.waypoints][1] - minX + 100) * scale
+					local wyLast = y + 10 + (connectedTo.waypoints[#connectedTo.waypoints][2] - minY + 100) * scale
+					self:DrawBezierCurve(wxLast, wyLast, x2, y2, color, 8)
+				else
+					-- Direct connection without waypoints
+					self:DrawBezierCurve(x1, y1, x2, y2, color, 8)
+				end
+			end
 		end
 
-		surface.DrawRect(nx - nodeSize/2, ny - nodeSize/2, nodeSize, nodeSize)
+		if self.SelectedNodes[nodeId] then
+			surface.SetDrawColor(self.SelectedNodeColor)
+			surface.SetTextColor(self.SelectedNodeColor)
+		else
+			surface.SetDrawColor(self.NodeColor)
+			surface.SetTextColor(255, 255, 255)
+		end
+
+		if node.visual == "label" then
+			surface.SetFont("FPGAIO")
+			local szx, szy = surface.GetTextSize(node.value)
+			surface.SetTextPos(nx - szx/2, ny - szy)
+			surface.DrawText(node.value)
+		else
+			surface.DrawRect(nx - nodeSize/2, ny - nodeSize/2, nodeSize, nodeSize)
+		end
 	end
 
 	-- Draw viewport rectangle with clipping
