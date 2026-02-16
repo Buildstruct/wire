@@ -1369,7 +1369,7 @@ function Editor:PaintMinimap()
 	surface.DrawOutlinedRect(x, y, size, size)
 
 	-- Calculate bounds of all nodes
-	if not self.Nodes[1] then return end
+	if #self.Nodes < 1 then return end
 	local minX, maxX = math.huge, -math.huge
 	local minY, maxY = math.huge, -math.huge
 
