@@ -642,27 +642,27 @@ end
 
 function Editor:DrawBezierCurve(x1, y1, x2, y2, color, segments)
 	segments = segments or 20
-	
+
 	-- Calculate control points for smooth curve
 	local distance = math.sqrt((x2 - x1)^2 + (y2 - y1)^2)
 	local offsetX = math.min(distance * 0.5, 100)
-	
+
 	local cx1 = x1 + offsetX
 	local cy1 = y1
 	local cx2 = x2 - offsetX
 	local cy2 = y2
-	
+
 	surface.SetDrawColor(color)
-	
+
 	local prevX, prevY = x1, y1
 	for i = 1, segments do
 		local t = i / segments
 		local it = 1 - t
-		
+
 		-- Cubic Bezier formula
 		local x = it^3 * x1 + 3 * it^2 * t * cx1 + 3 * it * t^2 * cx2 + t^3 * x2
 		local y = it^3 * y1 + 3 * it^2 * t * cy1 + 3 * it * t^2 * cy2 + t^3 * y2
-		
+
 		surface.DrawLine(prevX, prevY, x, y)
 		prevX, prevY = x, y
 	end
@@ -671,7 +671,7 @@ end
 function Editor:DrawCircle(x, y, radius, segments)
 	segments = segments or 16
 	local circle = {}
-	
+
 	for i = 0, segments do
 		local angle = (i / segments) * math.pi * 2
 		table.insert(circle, {
@@ -679,7 +679,7 @@ function Editor:DrawCircle(x, y, radius, segments)
 			y = y + math.sin(angle) * radius
 		})
 	end
-	
+
 	draw.NoTexture()
 	surface.DrawPoly(circle)
 end
@@ -689,7 +689,7 @@ end
 --------------------------------------------------------
 function Editor:SaveState(description)
 	if not self.UndoEnabled then return end
-	
+
 	-- Deep copy current state
 	local state = {
 		Nodes = table.Copy(self.Nodes),
@@ -699,7 +699,7 @@ function Editor:SaveState(description)
 		OutputNameCounter = self.OutputNameCounter,
 		Description = description or "Unknown Action"
 	}
-	
+
 	-- Deep copy connections with waypoints
 	for nodeId, node in pairs(state.Nodes) do
 		if node.connections then
@@ -714,21 +714,21 @@ function Editor:SaveState(description)
 			state.Nodes[nodeId].connections = newConnections
 		end
 	end
-	
+
 	table.insert(self.UndoStack, state)
-	
+
 	-- Limit undo stack size
 	while #self.UndoStack > self.MaxUndoSteps do
 		table.remove(self.UndoStack, 1)
 	end
-	
+
 	-- Clear redo stack when new action is performed
 	self.RedoStack = {}
 end
 
 function Editor:Undo()
 	if #self.UndoStack == 0 then return end
-	
+
 	-- Save current state to redo stack
 	local currentState = {
 		Nodes = table.Copy(self.Nodes),
@@ -737,7 +737,7 @@ function Editor:Undo()
 		InputNameCounter = self.InputNameCounter,
 		OutputNameCounter = self.OutputNameCounter
 	}
-	
+
 	-- Deep copy connections with waypoints for redo
 	for nodeId, node in pairs(currentState.Nodes) do
 		if node.connections then
@@ -752,9 +752,9 @@ function Editor:Undo()
 			currentState.Nodes[nodeId].connections = newConnections
 		end
 	end
-	
+
 	table.insert(self.RedoStack, currentState)
-	
+
 	-- Restore previous state
 	local state = table.remove(self.UndoStack)
 	self:RestoreState(state)
@@ -762,7 +762,7 @@ end
 
 function Editor:Redo()
 	if #self.RedoStack == 0 then return end
-	
+
 	-- Save current state to undo stack
 	local currentState = {
 		Nodes = table.Copy(self.Nodes),
@@ -771,7 +771,7 @@ function Editor:Redo()
 		InputNameCounter = self.InputNameCounter,
 		OutputNameCounter = self.OutputNameCounter
 	}
-	
+
 	-- Deep copy connections with waypoints for undo
 	for nodeId, node in pairs(currentState.Nodes) do
 		if node.connections then
@@ -786,9 +786,9 @@ function Editor:Redo()
 			currentState.Nodes[nodeId].connections = newConnections
 		end
 	end
-	
+
 	table.insert(self.UndoStack, currentState)
-	
+
 	-- Restore next state
 	local state = table.remove(self.RedoStack)
 	self:RestoreState(state)
@@ -800,7 +800,7 @@ function Editor:RestoreState(state)
 	self.Zoom = state.Zoom
 	self.InputNameCounter = state.InputNameCounter or 0
 	self.OutputNameCounter = state.OutputNameCounter or 0
-	
+
 	-- Deep copy connections with waypoints
 	for nodeId, node in pairs(self.Nodes) do
 		if node.connections then
@@ -815,7 +815,7 @@ function Editor:RestoreState(state)
 			self.Nodes[nodeId].connections = newConnections
 		end
 	end
-	
+
 	-- Clear selections
 	self.SelectedNodes = {}
 	self.SelectedNodeCount = 0
@@ -852,7 +852,7 @@ function Editor:GetNodeAt(x, y)
 		local visual = self:GetVisual(node)
 		if visual then
 			--editor nodes
-			
+
 			if visual.method == "text" then
 				if visual.font == "auto" then
 					if (self.Zoom > self.ZoomThreshold) then
@@ -930,12 +930,12 @@ function Editor:GetNodeOutputAt(x, y)
 		if gate.outputs then
 			for outputNum, _ in pairs(gate.outputs) do
 				local ix, iy = self:NodeOutputPos(node, outputNum)
-	
+
 				if gx < ix - self.IOSize / 2 then continue end
 				if gx > ix + self.IOSize / 2 then continue end
 				if gy < iy - self.IOSize / 2 then continue end
 				if gy > iy + self.IOSize / 2 then continue end
-	
+
 				return k, outputNum
 			end
 		else
@@ -955,7 +955,7 @@ end
 
 function Editor:GetWaypointAt(x, y)
 	local radius = self.Zoom * self.IOSize / 2
-	
+
 	for nodeId, node in pairs(self.Nodes) do
 		for inputNum, connectedTo in pairs(node.connections) do
 			local waypoints = connectedTo.waypoints
@@ -965,7 +965,7 @@ function Editor:GetWaypointAt(x, y)
 					local dx = x - sx
 					local dy = y - sy
 					local dist = math.sqrt(dx * dx + dy * dy)
-					
+
 					if dist <= radius then
 						local key = self:GetConnectionKey(nodeId, inputNum)
 						return key, i
@@ -974,7 +974,7 @@ function Editor:GetWaypointAt(x, y)
 			end
 		end
 	end
-	
+
 	return nil, nil
 end
 
@@ -982,48 +982,48 @@ function Editor:ClosestPointOnSegment(x, y, x1, y1, x2, y2)
 	local dx = x2 - x1
 	local dy = y2 - y1
 	local len2 = dx * dx + dy * dy
-	
+
 	if len2 == 0 then return x1, y1 end
-	
+
 	local t = math.max(0, math.min(1, ((x - x1) * dx + (y - y1) * dy) / len2))
-	
+
 	return x1 + t * dx, y1 + t * dy, t
 end
 
 function Editor:GetConnectionSegmentAt(x, y)
 	local gx, gy = self:ScrToPos(x, y)
 	local threshold = 5 / self.Zoom
-	
+
 	for nodeId, node in pairs(self.Nodes) do
 		local gate = getGate(node)
 		if not gate then continue end
-		
+
 		for inputNum, connectedTo in pairs(node.connections) do
 			local outputNodeId = connectedTo[1]
 			local outputNum = connectedTo[2]
 			local outputNode = self.Nodes[outputNodeId]
-			
+
 			if not outputNode then continue end
-			
+
 			local points = {}
 			local x1, y1 = self:NodeOutputPos(outputNode, outputNum)
 			table.insert(points, {x1, y1})
-			
+
 			if connectedTo.waypoints then
 				for _, wp in ipairs(connectedTo.waypoints) do
 					table.insert(points, {wp[1], wp[2]})
 				end
 			end
-			
+
 			local x2, y2 = self:NodeInputPos(node, inputNum)
 			table.insert(points, {x2, y2})
-			
+
 			for i = 1, #points - 1 do
 				local px, py, t = self:ClosestPointOnSegment(gx, gy, points[i][1], points[i][2], points[i+1][1], points[i+1][2])
 				local dx = gx - px
 				local dy = gy - py
 				local dist = math.sqrt(dx * dx + dy * dy)
-				
+
 				if dist <= threshold then
 					local key = self:GetConnectionKey(nodeId, inputNum)
 					return key, i, px, py
@@ -1031,7 +1031,7 @@ function Editor:GetConnectionSegmentAt(x, y)
 			end
 		end
 	end
-	
+
 	return nil, nil, nil, nil
 end
 
@@ -1040,43 +1040,43 @@ end
 --------------------------------------------------------
 function Editor:PaintConnection(nodeFrom, output, nodeTo, input, type)
 	local connectedTo = nodeTo.connections[input]
-	
+
 	local x1, y1 = self:NodeOutputPos(nodeFrom, output)
 	local sx1, sy1 = self:PosToScr(x1, y1)
-	
+
 	local points = {{sx1, sy1}}
-	
+
 	if connectedTo and connectedTo.waypoints then
 		for _, wp in ipairs(connectedTo.waypoints) do
 			local sx, sy = self:PosToScr(wp[1], wp[2])
 			table.insert(points, {sx, sy})
 		end
 	end
-	
+
 	local x2, y2 = self:NodeInputPos(nodeTo, input)
 	local sx2, sy2 = self:PosToScr(x2, y2)
 	table.insert(points, {sx2, sy2})
-	
+
 	local color = FPGATypeColor[type]
-	
+
 	-- Draw smooth Bezier curves between points
 	for i = 1, #points - 1 do
 		self:DrawBezierCurve(points[i][1], points[i][2], points[i+1][1], points[i+1][2], color)
 	end
-	
+
 	-- Draw waypoint handles
 	if connectedTo and connectedTo.waypoints then
 		for i, wp in ipairs(connectedTo.waypoints) do
 			local sx, sy = self:PosToScr(wp[1], wp[2])
 			local r = self.Zoom * self.IOSize / 2
-			
+
 			-- Check if this waypoint is being hovered or dragged
 			local key = self:GetConnectionKey(nodeTo.id or input, input)
 			local wpKey = self:GetWaypointSelectionKey(key, i)
 			local isSelected = self.SelectedWaypoints[wpKey]
 			local isHovered = self.HoveringWaypoint and self.HoveringWaypoint[1] == key and self.HoveringWaypoint[2] == i
 			local isDragged = self.DraggingWaypoint and self.DraggingWaypoint[1] == key and self.DraggingWaypoint[2] == i
-			
+
 			-- Draw selection/hover highlight (rounded)
 			if isSelected then
 				surface.SetDrawColor(Color(0, 122, 204, 255)) -- VS Code blue
@@ -1085,7 +1085,7 @@ function Editor:PaintConnection(nodeFrom, output, nodeTo, input, type)
 				surface.SetDrawColor(Color(255, 198, 109, 200)) -- Warm glow
 				self:DrawCircle(sx, sy, r + 1)
 			end
-			
+
 			surface.SetDrawColor(self.WaypointColor)
 			self:DrawCircle(sx, sy, r)
 		end
@@ -1191,31 +1191,31 @@ function Editor:PaintGate(nodeId, node, gate)
 			bodyColor = self.NodeColor
 		end
 	end
-	
+
 	-- Animated glow for selected nodes (draw FIRST, behind everything)
 	if self.SelectedNodes[nodeId] then
 		local glowAnim = self:Animate("node_glow_" .. nodeId, 1, 5)
 		local glowAlpha = 100 + math.sin(SysTime() * 3) * 50 * glowAnim
 		local glowSize = 2 + glowAnim * 2
-		
+
 		local glowColor = Color(0, 122, 204, glowAlpha)
 		draw.RoundedBox(cornerRadius + glowSize, x - size / 2 - glowSize, y - size / 2 - glowSize, size + glowSize * 2, size * height + glowSize * 2, glowColor)
 	else
 		-- Fade out glow
 		self:Animate("node_glow_" .. nodeId, 0, 8)
 	end
-	
+
 	-- Draw shadow (offset)
 	draw.RoundedBox(cornerRadius, x - size / 2 + 3, y - size / 2 + 3, size, size * height, self.NodeShadowColor)
-	
+
 	-- Draw main node body
 	draw.RoundedBox(cornerRadius, x - size / 2, y - size / 2, size, size * height, bodyColor)
-	
+
 	-- Draw subtle outline
 	surface.SetDrawColor(self.NodeOutlineColor)
 	-- Top
 	surface.DrawLine(x - size / 2 + cornerRadius, y - size / 2, x + size / 2 - cornerRadius, y - size / 2)
-	-- Bottom 
+	-- Bottom
 	surface.DrawLine(x - size / 2 + cornerRadius, y - size / 2 + size * height, x + size / 2 - cornerRadius, y - size / 2 + size * height)
 	-- Left
 	surface.DrawLine(x - size / 2, y - size / 2 + cornerRadius, x - size / 2, y - size / 2 + size * height - cornerRadius)
@@ -1290,26 +1290,26 @@ end
 
 function Editor:PaintGrid()
 	if not self.GridEnabled then return end
-	
+
 	local gridSize = self.GridSize * self.Zoom
 	if gridSize < 5 then return end
-	
+
 	local screenW = self:GetWide() - 300
 	local screenH = self:GetTall() - 36
-	
+
 	local startX = math.floor((self.Position[1] - screenW / (2 * self.Zoom)) / self.GridSize) * self.GridSize
 	local endX = math.ceil((self.Position[1] + screenW / (2 * self.Zoom)) / self.GridSize) * self.GridSize
 	local startY = math.floor((self.Position[2] - screenH / (2 * self.Zoom)) / self.GridSize) * self.GridSize
 	local endY = math.ceil((self.Position[2] + screenH / (2 * self.Zoom)) / self.GridSize) * self.GridSize
-	
+
 	surface.SetDrawColor(self.GridColor)
-	
+
 	for x = startX, endX, self.GridSize do
 		local sx, sy1 = self:PosToScr(x, startY)
 		local _, sy2 = self:PosToScr(x, endY)
 		surface.DrawLine(sx, sy1, sx, sy2)
 	end
-	
+
 	for y = startY, endY, self.GridSize do
 		local sx1, sy = self:PosToScr(startX, y)
 		local sx2, _ = self:PosToScr(endX, y)
@@ -1327,7 +1327,7 @@ function Editor:PaintHelp()
 		and drag around the plane with the right mouse button.
 		Connect inputs and outputs by left clicking on either, and dragging to the other.
 		By double clicking on an input or output, you can draw multiple connections at once.
-		
+
 		'C' creates a gate at the cursor position (select which gate on the right menu)
 		'X' deletes the gate or the waypoint under the cursor (or with a selection, deletes all selected gates)
 		'E' edits the gate under the cursor (input/output names, constant values)
@@ -1353,24 +1353,24 @@ end
 
 function Editor:PaintMinimap()
 	if not self.MinimapEnabled or #self.Nodes == 0 then return end
-	
+
 	local size = self.MinimapSize
 	local padding = self.MinimapPadding
 	local x = self:GetWide() - 300 - size - padding
 	local y = self:GetTall() - size - padding
-	
+
 	-- Background
 	draw.RoundedBox(4, x, y, size, size, Color(20, 20, 20, self.MinimapAlpha))
-	
+
 	-- Border
 	surface.SetDrawColor(Color(60, 60, 60, self.MinimapAlpha))
 	surface.DrawOutlinedRect(x, y, size, size)
-	
+
 	-- Calculate bounds of all nodes
 	if not self.Nodes[1] then return end
 	local minX, maxX = math.huge, -math.huge
 	local minY, maxY = math.huge, -math.huge
-	
+
 	for _, node in pairs(self.Nodes) do
 		if node.x then
 			minX = math.min(minX, node.x)
@@ -1379,28 +1379,28 @@ function Editor:PaintMinimap()
 			maxY = math.max(maxY, node.y)
 		end
 	end
-	
+
 	local worldW = maxX - minX + 200
 	local worldH = maxY - minY + 200
 	local scale = math.min((size - 20) / worldW, (size - 20) / worldH)
-	
+
 	-- Draw nodes on minimap
 	for nodeId, node in pairs(self.Nodes) do
 		if not node.x then continue end
-		
+
 		local nx = x + 10 + (node.x - minX + 100) * scale
 		local ny = y + 10 + (node.y - minY + 100) * scale
 		local nodeSize = 3
-		
+
 		if self.SelectedNodes[nodeId] then
 			surface.SetDrawColor(self.SelectedNodeColor)
 		else
 			surface.SetDrawColor(self.NodeColor)
 		end
-		
+
 		surface.DrawRect(nx - nodeSize/2, ny - nodeSize/2, nodeSize, nodeSize)
 	end
-	
+
 	-- Draw viewport rectangle
 	local viewW = (self:GetWide() - 300) / self.Zoom
 	local viewH = self:GetTall() / self.Zoom
@@ -1408,7 +1408,7 @@ function Editor:PaintMinimap()
 	local vy = y + 10 + (self.Position[2] - minY + 100 - viewH/2) * scale
 	local vw = viewW * scale
 	local vh = viewH * scale
-	
+
 	surface.SetDrawColor(self.SelectedNodeColor)
 	surface.DrawOutlinedRect(vx, vy, vw, vh)
 	surface.DrawOutlinedRect(vx + 1, vy + 1, vw - 2, vh - 2)
@@ -1419,24 +1419,24 @@ end
 --------------------------------------------------------
 function Editor:Animate(key, targetValue, speed)
 	speed = speed or 10
-	
+
 	if not self.Animations[key] then
 		self.Animations[key] = {value = 0, target = targetValue}
 	end
-	
+
 	local anim = self.Animations[key]
 	anim.target = targetValue
-	
+
 	-- Smooth lerp
 	local delta = self.LastFrameTime and (SysTime() - self.LastFrameTime) or 0
 	local step = delta * speed
-	
+
 	if math.abs(anim.target - anim.value) > 0.01 then
 		anim.value = anim.value + (anim.target - anim.value) * step
 	else
 		anim.value = anim.target
 	end
-	
+
 	return anim.value
 end
 
@@ -1447,7 +1447,7 @@ end
 function Editor:Paint()
 	-- Update animation frame time
 	self.LastFrameTime = SysTime()
-	
+
 	surface.SetDrawColor(self.BackgroundColor)
 	surface.DrawRect(0, 36, self:GetWide() - 300, self:GetTall() - 36)
 
@@ -1496,7 +1496,7 @@ function Editor:Paint()
 		if self.AlignToGrid then
 			gx, gy = self:AlignPosToGrid(gx, gy)
 		end
-			
+
 
 		local cx, cy = self.Nodes[self.DraggingNode].x, self.Nodes[self.DraggingNode].y
 		local dx, dy = gx - cx, gy - cy -- Calculate movement delta
@@ -1504,23 +1504,23 @@ function Editor:Paint()
 		if self.SelectedNodes[self.DraggingNode] and self.SelectedNodeCount > 0 then
 			-- Track which nodes are being moved for waypoint updates
 			local movedNodes = {}
-			
+
 			for selectedNodeId, selectedNode in pairs(self.SelectedNodes) do
 				local sox, soy = self.Nodes[selectedNodeId].x - cx, self.Nodes[selectedNodeId].y - cy
 				self.Nodes[selectedNodeId].x = gx + sox
 				self.Nodes[selectedNodeId].y = gy + soy
 				movedNodes[selectedNodeId] = true
 			end
-			
+
 			-- Update waypoints for connections involving moved nodes
 			for nodeId, node in pairs(self.Nodes) do
 				for inputNum, connection in pairs(node.connections) do
 					local outputNodeId = connection[1]
-					
+
 					-- Check if either end of connection is being moved
 					local inputMoved = movedNodes[nodeId]
 					local outputMoved = movedNodes[outputNodeId]
-					
+
 					-- Only move waypoints if BOTH ends are moving together
 					if inputMoved and outputMoved and connection.waypoints then
 						for i, wp in ipairs(connection.waypoints) do
@@ -1533,13 +1533,13 @@ function Editor:Paint()
 			self.SelectedNodes = {}
 			self.Nodes[self.DraggingNode].x = gx
 			self.Nodes[self.DraggingNode].y = gy
-			
+
 			-- Update waypoints for connections involving this single node
 			local draggedNodeId = self.DraggingNode
 			for nodeId, node in pairs(self.Nodes) do
 				for inputNum, connection in pairs(node.connections) do
 					local outputNodeId = connection[1]
-					
+
 					-- Only move waypoints if BOTH ends are the same node (shouldn't happen but safe check)
 					-- For single node, we don't move waypoints since only one end moves
 					-- This is intentional - waypoints stay fixed when only one node moves
@@ -1551,14 +1551,14 @@ function Editor:Paint()
 	if self.DraggingWaypoint then
 		local x, y = self:CursorPos()
 		local gx, gy = self:ScrToPos(x, y)
-		
+
 		if self.AlignToGrid then
 			gx, gy = self:AlignPosToGrid(gx, gy)
 		end
-		
+
 		local key = self.DraggingWaypoint[1]
 		local wpIndex = self.DraggingWaypoint[2]
-		
+
 		-- Calculate delta from the dragged waypoint's original position
 		local originalPos = nil
 		for nodeId, node in pairs(self.Nodes) do
@@ -1571,16 +1571,16 @@ function Editor:Paint()
 			end
 			if originalPos then break end
 		end
-		
+
 		if originalPos then
 			local dx = gx - originalPos[1]
 			local dy = gy - originalPos[2]
-			
+
 			-- Move all selected waypoints by the same delta
 			for wpSelKey, wpData in pairs(self.SelectedWaypoints) do
 				local wpKey = wpData.key
 				local wpIdx = wpData.index
-				
+
 				for nodeId, node in pairs(self.Nodes) do
 					for inputNum, connectedTo in pairs(node.connections) do
 						local testKey = self:GetConnectionKey(nodeId, inputNum)
@@ -1633,7 +1633,7 @@ function Editor:Paint()
 	if self.DrawingSelection then
 		local sx, sy = self:PosToScr(self.DrawingSelection[1], self.DrawingSelection[2])
 		local mx, my = self:CursorPos()
-		
+
 		local x, y = math.min(sx, mx), math.min(sy, my)
 		local w, h = math.abs(sx - mx), math.abs(sy - my)
 
@@ -1683,7 +1683,7 @@ function Editor:PaintOverlay()
 		surface.DrawText(text)
 		y = y + 20
 	end
-	
+
 	-- Display selected waypoints count
 	if self.SelectedWaypointCount > 0 then
 		surface.SetTextColor(255, 200, 100)
@@ -1713,7 +1713,7 @@ function Editor:PaintOverlay()
 		surface.DrawText(text)
 		y = y + 20
 	end
-	
+
 	-- Display Undo/Redo stack info
 	if #self.UndoStack > 0 or #self.RedoStack > 0 then
 		surface.SetTextColor(180, 180, 180)
@@ -1742,7 +1742,7 @@ end
 function Editor:CreateNode(selectedInMenu, x, y)
 	-- Save state before creating node
 	self:SaveState("Create Node")
-	
+
 	node = {
 		type = selectedInMenu.type,
 		gate = selectedInMenu.gate,
@@ -1778,7 +1778,7 @@ end
 
 function Editor:DeleteNode(nodeId)
 	--print("Deleted " .. nodeId)
-	
+
 	--remove all connections to this node
 	for k1, node in pairs(self.Nodes) do
 		for inputNum, connection in pairs(node.connections) do
@@ -1899,14 +1899,14 @@ function Editor:PasteNodes(x, y)
 				waypointsCopy = {}
 				local offsetX = x - copyOffset[1]
 				local offsetY = y - copyOffset[2]
-				
+
 				for i, wp in ipairs(connection.waypoints) do
 					waypointsCopy[i] = {wp[1] + offsetX, wp[2] + offsetY}
 				end
 			end
-			
-			nodeCopy.connections[inputNum] = { 
-				nodeIdLookup[connection[1]], 
+
+			nodeCopy.connections[inputNum] = {
+				nodeIdLookup[connection[1]],
 				connection[2],
 				waypoints = waypointsCopy
 			}
@@ -1953,22 +1953,22 @@ function Editor:OnKeyCodePressed(code)
 	elseif code == KEY_X then
 		if self.SelectedWaypointCount > 0 or self.SelectedNodeCount > 0 then
 			self:SaveState("Delete Selection")
-			
+
 			if self.SelectedWaypointCount > 0 then
 				local waypointsToDelete = {}
 				for wpSelKey, wpData in pairs(self.SelectedWaypoints) do
 					local key = wpData.key
 					local index = wpData.index
-					
+
 					if not waypointsToDelete[key] then
 						waypointsToDelete[key] = {}
 					end
 					table.insert(waypointsToDelete[key], index)
 				end
-				
+
 				for key, indices in pairs(waypointsToDelete) do
 					table.sort(indices, function(a, b) return a > b end)
-					
+
 					for nodeId, node in pairs(self.Nodes) do
 						for inputNum, connectedTo in pairs(node.connections) do
 							local testKey = self:GetConnectionKey(nodeId, inputNum)
@@ -1984,11 +1984,11 @@ function Editor:OnKeyCodePressed(code)
 						end
 					end
 				end
-				
+
 				self.SelectedWaypoints = {}
 				self.SelectedWaypointCount = 0
 			end
-			
+
 			if self.SelectedNodeCount > 0 then
 				for selectedNodeId, selectedNode in pairs(self.SelectedNodes) do
 					self:DeleteNode(selectedNodeId)
@@ -2126,7 +2126,7 @@ function Editor:OnMousePressed(code)
 		local wpKey, wpIndex = self:GetWaypointAt(x, y)
 		if wpKey then
 			local wpSelectionKey = self:GetWaypointSelectionKey(wpKey, wpIndex)
-			
+
 			-- Handle selection
 			if control then
 				-- Ctrl+Click: Toggle selection
@@ -2145,7 +2145,7 @@ function Editor:OnMousePressed(code)
 				self.SelectedWaypoints[wpSelectionKey] = {key = wpKey, index = wpIndex}
 				self.SelectedWaypointCount = 1
 			end
-			
+
 			-- Start dragging selected waypoint(s)
 			self:SaveState("Move Waypoint(s)")
 			self.DraggingWaypoint = {wpKey, wpIndex}
@@ -2180,7 +2180,7 @@ function Editor:OnMousePressed(code)
 					self.DrawingSelection = { gx, gy }
 				end
 			end
-			
+
 		end
 	elseif code == MOUSE_RIGHT then
 		-- PLANE DRAGGING
@@ -2204,7 +2204,7 @@ function Editor:OnMouseReleased(code)
 	elseif code == MOUSE_RIGHT then
 		self.DraggingWorld = false
 	end
-	
+
 end
 
 --EDITOR EVENTS
@@ -2229,7 +2229,7 @@ function Editor:BeginDrawingConnection(nodeId, inputNum, outputNum, doubleClick)
 			self.DrawingConnectionFrom = { nodeId, inputNum }
 			self.DrawingFromInput = true
 		end
-		
+
 		self.DrawingConnection = true
 	end
 
@@ -2249,7 +2249,7 @@ function Editor:OnDrawSelectionFinished(x, y)
 	local ux, uy = math.max(gx, mgx), math.max(gy, mgy)
 
 	local control = input.IsKeyDown(KEY_LCONTROL) or input.IsKeyDown(KEY_RCONTROL)
-	
+
 	-- Don't clear selections if holding Ctrl
 	if not control then
 		self.SelectedNodes = {}
@@ -2257,7 +2257,7 @@ function Editor:OnDrawSelectionFinished(x, y)
 		self.SelectedWaypoints = {}
 		self.SelectedWaypointCount = 0
 	end
-	
+
 	-- Select nodes in rectangle
 	for nodeId, node in pairs(self.Nodes) do
 		if node.x < lx then continue end
@@ -2268,7 +2268,7 @@ function Editor:OnDrawSelectionFinished(x, y)
 		self.SelectedNodes[nodeId] = true
 		self.SelectedNodeCount = self.SelectedNodeCount + 1
 	end
-	
+
 	-- Select waypoints in rectangle
 	for nodeId, node in pairs(self.Nodes) do
 		for inputNum, connectedTo in pairs(node.connections) do
@@ -2311,7 +2311,7 @@ function Editor:OnDrawConnectionFinished(x, y)
 	local outputNodeId = fromNodeId
 	local outputNode = fromNode
 	local connectionMade = false
-	
+
 	for _, portNum in pairs(drawingConnectionFrom) do
 		local nodeId, inputNum, outputNum
 		if self.DrawingFromOutput then
@@ -2386,7 +2386,7 @@ end
 
 function Editor:OpenNamingWindow(node, x, y)
 	if not self.NamingWindow then self:CreateNamingWindow() end
-	
+
 	if node.gate then
 		self.NamingNameEntry:SetText(node.ioName)
 		self.NamingNameEntry.OnEnter = function(pnl)
@@ -2408,7 +2408,7 @@ function Editor:OpenNamingWindow(node, x, y)
 	self.NamingWindow:SetVisible(true)
 	self.NamingWindow:MakePopup() -- This will move it above the E2 editor frame if it is behind it.
 	self.ForceDrawCursor = true
-	
+
 	local px, py = self:GetParent():GetPos()
 	self.NamingWindow:SetPos(px + x + 80, py + y + 30)
 
