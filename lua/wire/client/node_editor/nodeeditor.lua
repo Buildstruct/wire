@@ -1664,8 +1664,7 @@ function Editor:Paint()
 			end
 			local sx, sy = self:PosToScr(x, y)
 			local mx, my = self:CursorPos()
-			surface.SetDrawColor(FPGATypeColor[type])
-			surface.DrawLine(sx, sy, mx, my + (inputNum - selectedPort) * self.GateSize * self.Zoom)
+			self:DrawBezierCurve(sx, sy, mx, my + (inputNum - selectedPort) * self.GateSize * self.Zoom, FPGATypeColor[type])
 		end
 	end
 	-- selecting
