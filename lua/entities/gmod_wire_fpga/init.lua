@@ -270,7 +270,7 @@ function ENT:SynthesizeViewData(data)
 				eY = math.Round(node.y + (inputNum - 0.5) * FPGANodeSize),
 				t = FPGATypeEnum[getInputType(gate, inputNum)]
 			}
-			
+
 			-- Add waypoints if they exist
 			if connection.waypoints and #connection.waypoints > 0 then
 				edgeData.w = {}
@@ -278,7 +278,7 @@ function ENT:SynthesizeViewData(data)
 					table.insert(edgeData.w, {math.Round(wp[1] + FPGANodeSize / 2), math.Round(wp[2] + FPGANodeSize / 2)})
 				end
 			end
-			
+
 			table.insert(viewData.Edges, edgeData)
 		end
 	end

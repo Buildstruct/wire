@@ -592,7 +592,7 @@ function Editor:GetName()
 end
 
 function Editor:HasNodes()
-	return #self.Nodes > 0
+	return next(self.Nodes) ~= nil
 end
 
 --------------------------------------------------------
@@ -1355,7 +1355,7 @@ function Editor:PaintHelp()
 end
 
 function Editor:PaintMinimap()
-	if not self.MinimapConVar:GetBool() or #self.Nodes == 0 then return end
+	if not self.MinimapConVar:GetBool() or not self:HasNodes() then return end
 
 	local size = self.MinimapSize
 	local padding = self.MinimapPadding
@@ -1468,9 +1468,9 @@ function Editor:PaintMinimap()
 	local viewRight = vx + vw
 	local viewBottom = vy + vh
 
-	local hasIntersection = not (viewRight < minimapLeft or 
-								viewLeft > minimapRight or 
-								viewBottom < minimapTop or 
+	local hasIntersection = not (viewRight < minimapLeft or
+								viewLeft > minimapRight or
+								viewBottom < minimapTop or
 								viewTop > minimapBottom)
 
 	if hasIntersection then
@@ -1478,12 +1478,12 @@ function Editor:PaintMinimap()
 		local clippedTop = math.max(viewTop, minimapTop)
 		local clippedRight = math.min(viewRight, minimapRight)
 		local clippedBottom = math.min(viewBottom, minimapBottom)
-		
+
 		local clippedVx = clippedLeft
 		local clippedVy = clippedTop
 		local clippedVw = clippedRight - clippedLeft
 		local clippedVh = clippedBottom - clippedTop
-		
+
 		-- Draw clipped viewport rectangle
 		if clippedVw > 0 and clippedVh > 0 then
 			surface.SetDrawColor(self.SelectedNodeColor)
@@ -1498,7 +1498,7 @@ function Editor:PaintMinimap()
 		local viewCenterY = vy + vh / 2
 		local circleX = math.Clamp(viewCenterX, minimapLeft, minimapRight)
 		local circleY = math.Clamp(viewCenterY, minimapTop, minimapBottom)
-		
+
 		surface.SetDrawColor(self.SelectedNodeColor)
 		self:DrawCircle(circleX, circleY, 5, 16)
 	end
@@ -1545,7 +1545,7 @@ function Editor:Paint()
 	self:PaintNodes()
 	self:PaintConnections()
 
-	if #self.Nodes == 0 then
+	if not self:HasNodes() then
 		self:PaintHelp()
 	end
 
@@ -2005,6 +2005,74 @@ function Editor:PasteNodes(x, y)
 end
 
 --------------------------------------------------------
+--Local functions for editor (I'm not an egyptian)
+--------------------------------------------------------
+local function deleteWaypointsByKey(self, key, indices)
+    table.sort(indices, function(a, b) return a > b end)
+    for nodeId, node in pairs(self.Nodes) do
+        for inputNum, connectedTo in pairs(node.connections) do
+            local testKey = self:GetConnectionKey(nodeId, inputNum)
+            if testKey == key and connectedTo.waypoints then
+                for _, idx in ipairs(indices) do
+                    table.remove(connectedTo.waypoints, idx)
+                end
+                if #connectedTo.waypoints == 0 then
+                    connectedTo.waypoints = nil
+                end
+                break
+            end
+        end
+    end
+end
+
+local function deleteSelectedWaypoints(self)
+    local waypointsToDelete = {}
+    for wpSelKey, wpData in pairs(self.SelectedWaypoints) do
+        local key = wpData.key
+        local index = wpData.index
+        if not waypointsToDelete[key] then
+            waypointsToDelete[key] = {}
+        end
+        table.insert(waypointsToDelete[key], index)
+    end
+
+    for key, indices in pairs(waypointsToDelete) do
+        deleteWaypointsByKey(self, key, indices)
+    end
+
+    self.SelectedWaypoints = {}
+    self.SelectedWaypointCount = 0
+end
+
+local function deleteSelectedNodes(self)
+    for selectedNodeId in pairs(self.SelectedNodes) do
+        self:DeleteNode(selectedNodeId)
+    end
+    self.SelectedNodes = {}
+    self.SelectedNodeCount = 0
+end
+
+local function deleteWaypointAt(self, x, y)
+    local wpKey, wpIndex = self:GetWaypointAt(x, y)
+    if not wpKey then return false end
+
+    self:SaveState("Delete Waypoint")
+    for nodeId, node in pairs(self.Nodes) do
+        for inputNum, connectedTo in pairs(node.connections) do
+            local testKey = self:GetConnectionKey(nodeId, inputNum)
+            if testKey == wpKey and connectedTo.waypoints then
+                table.remove(connectedTo.waypoints, wpIndex)
+                if #connectedTo.waypoints == 0 then
+                    connectedTo.waypoints = nil
+                end
+                break
+            end
+        end
+    end
+    return true
+end
+
+--------------------------------------------------------
 --EVENTS
 --------------------------------------------------------
 --KEYBOARD
@@ -2038,66 +2106,15 @@ function Editor:OnKeyCodePressed(code)
 	elseif code == KEY_X then
 		if self.SelectedWaypointCount > 0 or self.SelectedNodeCount > 0 then
 			self:SaveState("Delete Selection")
-
 			if self.SelectedWaypointCount > 0 then
-				local waypointsToDelete = {}
-				for wpSelKey, wpData in pairs(self.SelectedWaypoints) do
-					local key = wpData.key
-					local index = wpData.index
-
-					if not waypointsToDelete[key] then
-						waypointsToDelete[key] = {}
-					end
-					table.insert(waypointsToDelete[key], index)
-				end
-
-				for key, indices in pairs(waypointsToDelete) do
-					table.sort(indices, function(a, b) return a > b end)
-
-					for nodeId, node in pairs(self.Nodes) do
-						for inputNum, connectedTo in pairs(node.connections) do
-							local testKey = self:GetConnectionKey(nodeId, inputNum)
-							if testKey == key and connectedTo.waypoints then
-								for _, idx in ipairs(indices) do
-									table.remove(connectedTo.waypoints, idx)
-								end
-								if #connectedTo.waypoints == 0 then
-									connectedTo.waypoints = nil
-								end
-								break
-							end
-						end
-					end
-				end
-
-				self.SelectedWaypoints = {}
-				self.SelectedWaypointCount = 0
+				deleteSelectedWaypoints(self)
 			end
-
 			if self.SelectedNodeCount > 0 then
-				for selectedNodeId, selectedNode in pairs(self.SelectedNodes) do
-					self:DeleteNode(selectedNodeId)
-				end
-				self.SelectedNodes = {}
-				self.SelectedNodeCount = 0
+				deleteSelectedNodes(self)
 			end
 		else
-			local wpKey, wpIndex = self:GetWaypointAt(x, y)
-			if wpKey then
-				self:SaveState("Delete Waypoint")
-				for nodeId, node in pairs(self.Nodes) do
-					for inputNum, connectedTo in pairs(node.connections) do
-						local testKey = self:GetConnectionKey(nodeId, inputNum)
-						if testKey == wpKey and connectedTo.waypoints then
-							table.remove(connectedTo.waypoints, wpIndex)
-							if #connectedTo.waypoints == 0 then
-								connectedTo.waypoints = nil
-							end
-							break
-						end
-					end
-				end
-			else
+			local deleted = deleteWaypointAt(self, x, y)
+			if not deleted then
 				local nodeId = self:GetNodeAt(x, y)
 				if nodeId then
 					self:SaveState("Delete Node")

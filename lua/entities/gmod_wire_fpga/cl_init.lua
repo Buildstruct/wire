@@ -213,9 +213,9 @@ function ENT:DrawInsideView()
 	for _, edge in pairs(self.ViewData.Edges) do
 		local x1 = centerX + edge.from.x * scale
 		local y1 = centerY + edge.from.y * scale
-		
+
 		local points = {{x1, y1}}
-		
+
 		if edge.waypoints then
 			for _, wp in ipairs(edge.waypoints) do
 				local wpX = centerX + wp.x * scale
@@ -223,36 +223,36 @@ function ENT:DrawInsideView()
 				table.insert(points, {wpX, wpY})
 			end
 		end
-		
+
 		local x2 = centerX + edge.to.x * scale
 		local y2 = centerY + edge.to.y * scale
 		table.insert(points, {x2, y2})
-		
+
 		for i = 1, #points - 1 do
 			self:DrawBezierCurve(points[i][1], points[i][2], points[i+1][1], points[i+1][2], FPGATypeColor[edge.type])
 		end
-		
+
 		if edge.waypoints then
 			for i, wp in ipairs(edge.waypoints) do
 				local wpX = centerX + wp.x * scale
 				local wpY = centerY + wp.y * scale
 				local wpRadius = math.max(2, nodeSize * 0.1)
-				
+
 				surface.SetDrawColor(waypointColor)
 				self:DrawCircle(wpX, wpY, wpRadius)
 			end
 		end
 	end
-	
+
 	for _, node in pairs(self.ViewData.Nodes) do
 		local x = centerX + node.x * scale
 		local y = centerY + node.y * scale
 		local w = nodeSize
 		local h = nodeSize * node.size
-		
+
 		-- Draw shadow
 		draw.RoundedBox(cornerRadius, x + 1, y + 1, w, h, shadowColor)
-		
+
 		-- Draw node body
 		draw.RoundedBox(cornerRadius, x, y, w, h, nodeColor)
 	end
@@ -339,7 +339,7 @@ function ENT:ConstructInsideView(viewData)
 				},
 				type = FPGATypeEnumLookup[edge.t]
 			}
-			
+
 			-- Add waypoints if they exist
 			if edge.w then
 				edgeData.waypoints = {}
@@ -350,7 +350,7 @@ function ENT:ConstructInsideView(viewData)
 					})
 				end
 			end
-			
+
 			table.insert(self.ViewData.Edges, edgeData)
 		end
 	end
