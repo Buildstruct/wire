@@ -984,10 +984,10 @@ function Editor:GetWaypointAt(x, y)
 end
 
 function Editor:ClosestPointOnBezier(gx, gy, x1, y1, x2, y2, flipStart, flipEnd, samples)
-    samples = samples or 20
+    samples = samples or 100
 
     local distance = math.sqrt((x2 - x1)^2 + (y2 - y1)^2)
-    local offsetX = math.min(distance * 0.5, 100)
+    local offsetX = math.min(distance * 0.5, 100 / self.Zoom)
 
     local cx1 = x1 + (flipStart and -offsetX or offsetX)
     local cy1 = y1
@@ -1065,7 +1065,7 @@ function Editor:GetConnectionSegmentAt(x, y)
                     gx, gy,
                     points[i][1], points[i][2],
                     points[i+1][1], points[i+1][2],
-                    flipStart, flipEnd, 50
+                    flipStart, flipEnd
                 )
 
                 if dist <= threshold then
@@ -1774,7 +1774,7 @@ function Editor:Paint()
 			end
 			local sx, sy = self:PosToScr(x, y)
 			local mx, my = self:CursorPos()
-			self:DrawBezierCurve(sx, sy, mx, my + (inputNum - selectedPort) * self.GateSize * self.Zoom, FPGATypeColor[type], nil, self.DrawingFromInput, true)
+			self:DrawBezierCurve(sx, sy, mx, my + (inputNum - selectedPort) * self.GateSize * self.Zoom, FPGATypeColor[type], nil, self.DrawingFromInput, not self.DrawingFromOutput)
 		end
 	end
 	-- selecting
