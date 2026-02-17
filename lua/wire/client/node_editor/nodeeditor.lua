@@ -1022,7 +1022,7 @@ function Editor:GetConnectionSegmentAt(x, y)
 			table.insert(points, {x2, y2})
 
 			for i = 1, #points - 1 do
-				local px, py, t = self:ClosestPointOnSegment(gx, gy, points[i][1], points[i][2], points[i+1][1], points[i+1][2])
+				local px, py, _ = self:ClosestPointOnSegment(gx, gy, points[i][1], points[i][2], points[i+1][1], points[i+1][2])
 				local dx = gx - px
 				local dy = gy - py
 				local dist = math.sqrt(dx * dx + dy * dy)
@@ -1398,7 +1398,6 @@ function Editor:PaintMinimap()
 
 		for inputNum, connectedTo in pairs(node.connections) do
 			local outputNodeId = connectedTo[1]
-			local outputNum = connectedTo[2]
 			local outputNode = self.Nodes[outputNodeId]
 
 			if outputNode then
@@ -1750,7 +1749,7 @@ function Editor:PaintOverlay()
 
 	if self.AlignToGrid then
 		surface.SetTextColor(100, 180, 255)
-		local tx, ty = surface.GetTextSize("Align to grid")
+		local tx, _ = surface.GetTextSize("Align to grid")
 		surface.SetTextPos(xOffset - tx, y)
 		surface.DrawText("Align to grid")
 		y = y + 20
@@ -1764,7 +1763,7 @@ function Editor:PaintOverlay()
 		else
 			text = text .. " nodes selected"
 		end
-		local tx, ty = surface.GetTextSize(text)
+		local tx, _ = surface.GetTextSize(text)
 		surface.SetTextPos(xOffset - tx, y)
 		surface.DrawText(text)
 		y = y + 20
@@ -1779,7 +1778,7 @@ function Editor:PaintOverlay()
 		else
 			text = text .. " waypoints selected"
 		end
-		local tx, ty = surface.GetTextSize(text)
+		local tx, _ = surface.GetTextSize(text)
 		surface.SetTextPos(xOffset - tx, y)
 		surface.DrawText(text)
 		y = y + 20
@@ -1794,7 +1793,7 @@ function Editor:PaintOverlay()
 		else
 			text = text .. " nodes in paste buffer"
 		end
-		local tx, ty = surface.GetTextSize(text)
+		local tx, _ = surface.GetTextSize(text)
 		surface.SetTextPos(xOffset - tx, y)
 		surface.DrawText(text)
 		y = y + 20
@@ -1804,7 +1803,7 @@ function Editor:PaintOverlay()
 	if #self.UndoStack > 0 or #self.RedoStack > 0 then
 		surface.SetTextColor(180, 180, 180)
 		local text = "Undo: " .. #self.UndoStack .. " | Redo: " .. #self.RedoStack
-		local tx, ty = surface.GetTextSize(text)
+		local tx, _ = surface.GetTextSize(text)
 		surface.SetTextPos(xOffset - tx, y)
 		surface.DrawText(text)
 		y = y + 20
