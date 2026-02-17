@@ -142,15 +142,15 @@ function ENT:DrawInsideViewBackground()
 	surface.DrawLine(poly[#poly].x, poly[#poly].y, poly[1].x, poly[1].y)
 end
 
-function ENT:DrawBezierCurve(x1, y1, x2, y2, color, segments)
+function ENT:DrawBezierCurve(x1, y1, x2, y2, color, segments, flipStart, flipEnd)
 	segments = segments or 20
 
 	local distance = math.sqrt((x2 - x1)^2 + (y2 - y1)^2)
 	local offsetX = math.min(distance * 0.5, 100)
 
-	local cx1 = x1 + offsetX
+	local cx1 = x1 + (flipStart and -offsetX or offsetX)
 	local cy1 = y1
-	local cx2 = x2 - offsetX
+	local cx2 = x2 - (flipEnd and -offsetX or offsetX)
 	local cy2 = y2
 
 	surface.SetDrawColor(color)
@@ -218,18 +218,38 @@ function ENT:DrawInsideView()
 
 		if edge.waypoints then
 			for _, wp in ipairs(edge.waypoints) do
-				local wpX = centerX + wp.x * scale
-				local wpY = centerY + wp.y * scale
-				table.insert(points, {wpX, wpY})
+				points[#points + 1] = {centerX + wp.x * scale, centerY + wp.y * scale}
 			end
 		end
 
 		local x2 = centerX + edge.to.x * scale
 		local y2 = centerY + edge.to.y * scale
-		table.insert(points, {x2, y2})
+		points[#points + 1] = {x2, y2}
+
+		local hasWaypoints = #points > 2
+		local lastFlipped
 
 		for i = 1, #points - 1 do
-			self:DrawBezierCurve(points[i][1], points[i][2], points[i+1][1], points[i+1][2], FPGATypeColor[edge.type])
+			local flipStart, flipEnd
+
+			if hasWaypoints then
+				local goingLeft = points[i+1][1] < points[i][1]
+
+				if i == 1 then
+					flipStart = false
+					flipEnd = goingLeft
+				else
+					flipStart = lastFlipped
+					flipEnd = (i < #points - 1) and goingLeft
+				end
+				lastFlipped = goingLeft
+			end
+
+			self:DrawBezierCurve(
+				points[i][1], points[i][2],
+				points[i+1][1], points[i+1][2],
+				FPGATypeColor[edge.type], nil, flipStart, flipEnd
+			)
 		end
 
 		if edge.waypoints then

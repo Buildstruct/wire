@@ -79,6 +79,8 @@ function Editor:Init()
 	self.GridColor = Color(50, 50, 50, 255)
 	self.SelectionColor = Color(220, 220, 100, 255)
 	self.WaypointColor = Color(255, 198, 109, 255)
+	self.WaypointSelectedColor = Color(0, 122, 204, 255)
+	self.WaypointHoverColor = Color(255, 198, 109, 200)
 
 	self.NodeColor = Color(100, 100, 100, 255)
 	self.InputNodeColor = Color(80, 90, 80, 255)
@@ -643,18 +645,17 @@ function Editor:GetWaypointSelectionKey(connectionKey, waypointIndex)
 	return connectionKey .. "_wp" .. tostring(waypointIndex)
 end
 
-function Editor:DrawBezierCurve(x1, y1, x2, y2, color, segments, flipped)
-	segments = segments or 20
-	flipped = flipped or false
+function Editor:DrawBezierCurve(x1, y1, x2, y2, color, segments, flipStart, flipEnd)
+    segments = segments or 20
 
 	-- Calculate control points for smooth curve
-	local distance = math.sqrt((x2 - x1)^2 + (y2 - y1)^2)
-	local offsetX = math.min(distance * 0.5, 100) * (flipped and -1 or 1)
+    local distance = math.sqrt((x2 - x1)^2 + (y2 - y1)^2)
+    local offsetX = math.min(distance * 0.5, 100)
 
-	local cx1 = x1 + offsetX
-	local cy1 = y1
-	local cx2 = x2 - offsetX
-	local cy2 = y2
+    local cx1 = x1 + (flipStart and -offsetX or offsetX)
+    local cy1 = y1
+    local cx2 = x2 - (flipEnd and -offsetX or offsetX)
+    local cy2 = y2
 
 	surface.SetDrawColor(color)
 
@@ -982,118 +983,169 @@ function Editor:GetWaypointAt(x, y)
 	return nil, nil
 end
 
-function Editor:ClosestPointOnSegment(x, y, x1, y1, x2, y2)
-	local dx = x2 - x1
-	local dy = y2 - y1
-	local len2 = dx * dx + dy * dy
+function Editor:ClosestPointOnBezier(gx, gy, x1, y1, x2, y2, flipStart, flipEnd, samples)
+    samples = samples or 20
 
-	if len2 == 0 then return x1, y1 end
+    local distance = math.sqrt((x2 - x1)^2 + (y2 - y1)^2)
+    local offsetX = math.min(distance * 0.5, 100)
 
-	local t = math.max(0, math.min(1, ((x - x1) * dx + (y - y1) * dy) / len2))
+    local cx1 = x1 + (flipStart and -offsetX or offsetX)
+    local cy1 = y1
+    local cx2 = x2 - (flipEnd and -offsetX or offsetX)
+    local cy2 = y2
 
-	return x1 + t * dx, y1 + t * dy, t
+    local bestDist = math.huge
+    local bestX, bestY = x1, y1
+
+    for i = 0, samples do
+        local t = i / samples
+        local it = 1 - t
+
+        local bx = it^3 * x1 + 3 * it^2 * t * cx1 + 3 * it * t^2 * cx2 + t^3 * x2
+        local by = it^3 * y1 + 3 * it^2 * t * cy1 + 3 * it * t^2 * cy2 + t^3 * y2
+
+        local dx = gx - bx
+        local dy = gy - by
+        local dist = dx * dx + dy * dy -- без sqrt, только для сравнения
+
+        if dist < bestDist then
+            bestDist = dist
+            bestX, bestY = bx, by
+        end
+    end
+
+    return bestX, bestY, math.sqrt(bestDist)
 end
 
 function Editor:GetConnectionSegmentAt(x, y)
-	local gx, gy = self:ScrToPos(x, y)
-	local threshold = 5 / self.Zoom
+    local gx, gy = self:ScrToPos(x, y)
+    local threshold = 8 / self.Zoom
 
-	for nodeId, node in pairs(self.Nodes) do
-		local gate = getGate(node)
-		if not gate then continue end
+    for nodeId, node in pairs(self.Nodes) do
+        local gate = getGate(node)
+        if not gate then continue end
 
-		for inputNum, connectedTo in pairs(node.connections) do
-			local outputNodeId = connectedTo[1]
-			local outputNum = connectedTo[2]
-			local outputNode = self.Nodes[outputNodeId]
+        for inputNum, connectedTo in pairs(node.connections) do
+            local outputNodeId = connectedTo[1]
+            local outputNum = connectedTo[2]
+            local outputNode = self.Nodes[outputNodeId]
+            if not outputNode then continue end
 
-			if not outputNode then continue end
+            local points = {}
+            points[1] = {self:NodeOutputPos(outputNode, outputNum)}
 
-			local points = {}
-			local x1, y1 = self:NodeOutputPos(outputNode, outputNum)
-			table.insert(points, {x1, y1})
+            if connectedTo.waypoints then
+                for _, wp in ipairs(connectedTo.waypoints) do
+                    points[#points + 1] = {wp[1], wp[2]}
+                end
+            end
 
-			if connectedTo.waypoints then
-				for _, wp in ipairs(connectedTo.waypoints) do
-					table.insert(points, {wp[1], wp[2]})
-				end
-			end
+            points[#points + 1] = {self:NodeInputPos(node, inputNum)}
 
-			local x2, y2 = self:NodeInputPos(node, inputNum)
-			table.insert(points, {x2, y2})
+            local hasWaypoints = #points > 2
+            local lastFlipped
 
-			for i = 1, #points - 1 do
-				local px, py, _ = self:ClosestPointOnSegment(gx, gy, points[i][1], points[i][2], points[i+1][1], points[i+1][2])
-				local dx = gx - px
-				local dy = gy - py
-				local dist = math.sqrt(dx * dx + dy * dy)
+            for i = 1, #points - 1 do
+                local flipStart, flipEnd
 
-				if dist <= threshold then
-					local key = self:GetConnectionKey(nodeId, inputNum)
-					return key, i, px, py
-				end
-			end
-		end
-	end
+                if hasWaypoints then
+                    local goingLeft = points[i+1][1] < points[i][1]
 
-	return nil, nil, nil, nil
+                    if i == 1 then
+                        flipStart = false
+                        flipEnd = goingLeft
+                    else
+                        flipStart = lastFlipped
+                        flipEnd = (i < #points - 1) and goingLeft
+                    end
+                    lastFlipped = goingLeft
+                end
+
+                local px, py, dist = self:ClosestPointOnBezier(
+                    gx, gy,
+                    points[i][1], points[i][2],
+                    points[i+1][1], points[i+1][2],
+                    flipStart, flipEnd, 50
+                )
+
+                if dist <= threshold then
+                    local key = self:GetConnectionKey(nodeId, inputNum)
+                    return key, i, px, py
+                end
+            end
+        end
+    end
+
+    return nil, nil, nil, nil
 end
 
 --------------------------------------------------------
 --DRAWING
 --------------------------------------------------------
 function Editor:PaintConnection(nodeFrom, output, nodeTo, input, type)
-	local connectedTo = nodeTo.connections[input]
+    local connectedTo = nodeTo.connections[input]
+    local x1, y1 = self:NodeOutputPos(nodeFrom, output)
+    local sx1, sy1 = self:PosToScr(x1, y1)
+    local points = {{sx1, sy1}}
 
-	local x1, y1 = self:NodeOutputPos(nodeFrom, output)
-	local sx1, sy1 = self:PosToScr(x1, y1)
+    if connectedTo and connectedTo.waypoints then
+        for _, wp in ipairs(connectedTo.waypoints) do
+            points[#points + 1] = {self:PosToScr(wp[1], wp[2])}
+        end
+    end
 
-	local points = {{sx1, sy1}}
+    local x2, y2 = self:NodeInputPos(nodeTo, input)
+    points[#points + 1] = {self:PosToScr(x2, y2)}
 
-	if connectedTo and connectedTo.waypoints then
-		for _, wp in ipairs(connectedTo.waypoints) do
-			local sx, sy = self:PosToScr(wp[1], wp[2])
-			table.insert(points, {sx, sy})
-		end
-	end
-
-	local x2, y2 = self:NodeInputPos(nodeTo, input)
-	local sx2, sy2 = self:PosToScr(x2, y2)
-	table.insert(points, {sx2, sy2})
-
-	local color = FPGATypeColor[type]
+    local color = FPGATypeColor[type]
+    local hasWaypoints = #points > 2
+    local lastFlipped
 
 	-- Draw smooth Bezier curves between points
-	for i = 1, #points - 1 do
-		self:DrawBezierCurve(points[i][1], points[i][2], points[i+1][1], points[i+1][2], color)
-	end
+    for i = 1, #points - 1 do
+        local flipStart, flipEnd
 
-	-- Draw waypoint handles
-	if connectedTo and connectedTo.waypoints then
-		for i, wp in ipairs(connectedTo.waypoints) do
-			local sx, sy = self:PosToScr(wp[1], wp[2])
-			local r = self.Zoom * self.IOSize / 2
+        if hasWaypoints then
+            local goingLeft = points[i+1][1] < points[i][1]
 
-			-- Check if this waypoint is being hovered or dragged
-			local key = self:GetConnectionKey(nodeTo.id or input, input)
-			local wpKey = self:GetWaypointSelectionKey(key, i)
-			local isSelected = self.SelectedWaypoints[wpKey]
-			local isHovered = self.HoveringWaypoint and self.HoveringWaypoint[1] == key and self.HoveringWaypoint[2] == i
-			local isDragged = self.DraggingWaypoint and self.DraggingWaypoint[1] == key and self.DraggingWaypoint[2] == i
+            if i == 1 then
+                flipStart = false
+                flipEnd = goingLeft
+            else
+                flipStart = lastFlipped
+                flipEnd = (i < #points - 1) and goingLeft
+            end
+            lastFlipped = goingLeft
+        end
 
-			-- Draw selection/hover highlight (rounded)
-			if isSelected then
-				surface.SetDrawColor(Color(0, 122, 204, 255)) -- VS Code blue
-				self:DrawCircle(sx, sy, r + 2)
-			elseif isDragged or isHovered then
-				surface.SetDrawColor(Color(255, 198, 109, 200)) -- Warm glow
-				self:DrawCircle(sx, sy, r + 1)
-			end
+        self:DrawBezierCurve(
+            points[i][1], points[i][2],
+            points[i+1][1], points[i+1][2],
+            color, nil, flipStart, flipEnd
+        )
+    end
 
-			surface.SetDrawColor(self.WaypointColor)
-			self:DrawCircle(sx, sy, r)
-		end
-	end
+    if connectedTo and connectedTo.waypoints then
+        local key = self:GetConnectionKey(nodeTo.id or input, input)
+        local r = self.Zoom * self.IOSize / 2
+
+        for i, wp in ipairs(connectedTo.waypoints) do
+            local sx, sy = self:PosToScr(wp[1], wp[2])
+            local wpKey = self:GetWaypointSelectionKey(key, i)
+
+            if self.SelectedWaypoints[wpKey] then
+                surface.SetDrawColor(self.WaypointSelectedColor)
+                self:DrawCircle(sx, sy, r + 2)
+            elseif (self.DraggingWaypoint and self.DraggingWaypoint[1] == key and self.DraggingWaypoint[2] == i)
+                or (self.HoveringWaypoint and self.HoveringWaypoint[1] == key and self.HoveringWaypoint[2] == i) then
+                surface.SetDrawColor(self.WaypointHoverColor)
+                self:DrawCircle(sx, sy, r + 1)
+            end
+
+            surface.SetDrawColor(self.WaypointColor)
+            self:DrawCircle(sx, sy, r)
+        end
+    end
 end
 
 function Editor:PaintConnections()
@@ -1400,36 +1452,46 @@ function Editor:PaintMinimap()
 		for inputNum, connectedTo in pairs(node.connections) do
 			local outputNodeId = connectedTo[1]
 			local outputNode = self.Nodes[outputNodeId]
+			if not outputNode then continue end
 
-			if outputNode then
-				local x1 = x + 10 + (outputNode.x - minX + 100) * scale
-				local y1 = y + 10 + (outputNode.y - minY + 100) * scale
-				local x2 = x + 10 + (node.x - minX + 100) * scale
-				local y2 = y + 10 + (node.y - minY + 100) * scale
+			local color = ColorAlpha(FPGATypeColor[getInputType(getGate(node), inputNum)], self.MinimapConnectionAlpha)
 
-				local color = ColorAlpha(FPGATypeColor[getInputType(getGate(node), inputNum)], self.MinimapConnectionAlpha)
+			-- Draw connection with waypoints
+			local points = {}
+			points[1] = {x + 10 + (outputNode.x - minX + 100) * scale, y + 10 + (outputNode.y - minY + 100) * scale}
 
-				-- Draw connection with waypoints
-				if connectedTo.waypoints and #connectedTo.waypoints > 0 then
-					local wx1 = x + 10 + (connectedTo.waypoints[1][1] - minX + 100) * scale
-					local wy1 = y + 10 + (connectedTo.waypoints[1][2] - minY + 100) * scale
-					self:DrawBezierCurve(x1, y1, wx1, wy1, color, 8)
-
-					for i = 1, #connectedTo.waypoints - 1 do
-						local wx1 = x + 10 + (connectedTo.waypoints[i][1] - minX + 100) * scale
-						local wy1 = y + 10 + (connectedTo.waypoints[i][2] - minY + 100) * scale
-						local wx2 = x + 10 + (connectedTo.waypoints[i+1][1] - minX + 100) * scale
-						local wy2 = y + 10 + (connectedTo.waypoints[i+1][2] - minY + 100) * scale
-						self:DrawBezierCurve(wx1, wy1, wx2, wy2, color, 8)
-					end
-
-					local wxLast = x + 10 + (connectedTo.waypoints[#connectedTo.waypoints][1] - minX + 100) * scale
-					local wyLast = y + 10 + (connectedTo.waypoints[#connectedTo.waypoints][2] - minY + 100) * scale
-					self:DrawBezierCurve(wxLast, wyLast, x2, y2, color, 8)
-				else
-					-- Direct connection without waypoints
-					self:DrawBezierCurve(x1, y1, x2, y2, color, 8)
+			if connectedTo.waypoints then
+				for _, wp in ipairs(connectedTo.waypoints) do
+					points[#points + 1] = {x + 10 + (wp[1] - minX + 100) * scale, y + 10 + (wp[2] - minY + 100) * scale}
 				end
+			end
+
+			points[#points + 1] = {x + 10 + (node.x - minX + 100) * scale, y + 10 + (node.y - minY + 100) * scale}
+
+			local hasWaypoints = #points > 2
+			local lastFlipped
+
+			for i = 1, #points - 1 do
+				local flipStart, flipEnd
+
+				if hasWaypoints then
+					local goingLeft = points[i+1][1] < points[i][1]
+
+					if i == 1 then
+						flipStart = false
+						flipEnd = goingLeft
+					else
+						flipStart = lastFlipped
+						flipEnd = (i < #points - 1) and goingLeft
+					end
+					lastFlipped = goingLeft
+				end
+
+				self:DrawBezierCurve(
+					points[i][1], points[i][2],
+					points[i+1][1], points[i+1][2],
+					color, 8, flipStart, flipEnd
+				)
 			end
 		end
 
@@ -1712,7 +1774,7 @@ function Editor:Paint()
 			end
 			local sx, sy = self:PosToScr(x, y)
 			local mx, my = self:CursorPos()
-			self:DrawBezierCurve(sx, sy, mx, my + (inputNum - selectedPort) * self.GateSize * self.Zoom, FPGATypeColor[type], nil, self.DrawingFromInput)
+			self:DrawBezierCurve(sx, sy, mx, my + (inputNum - selectedPort) * self.GateSize * self.Zoom, FPGATypeColor[type], nil, self.DrawingFromInput, true)
 		end
 	end
 	-- selecting
