@@ -2145,6 +2145,8 @@ function Editor:OnKeyCodePressed(code)
 	local shift = input.IsKeyDown(KEY_LSHIFT) or input.IsKeyDown(KEY_RSHIFT)
 
 	if control then
+    self:OnShortcut(code)
+
 		if code == KEY_Z then
 			--Undo
 			self:Undo()
