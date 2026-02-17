@@ -359,7 +359,7 @@ function Editor:InitComponents()
 	local searching
 	function self.C.Search:OnTextChanged()
 		local text = self:GetValue()
-		if text != "" then
+		if text ~= "" then
 			if not searching then
 				searching = true
 				local x, y = this.C.Tree:GetPos()
@@ -2445,7 +2445,7 @@ function Editor:OnDrawConnectionFinished(x, y)
 				outputType = getOutputType(getGate(outputNode), outputNum)
 			end
 
-			if inputType == outputType and inputNode != outputNode then
+			if inputType == outputType and inputNode ~= outputNode then
 				if not connectionMade then
 					self:SaveState("Create Connection")
 					connectionMade = true
@@ -2565,7 +2565,7 @@ end
 
 local function validateVector(string)
 	local x,y,z = string.match(string, "^ *([^%s,]+) *, *([^%s,]+) *, *([^%s,]+) *$")
-	return tonumber(x) != nil and tonumber(y) != nil and tonumber(z) != nil, x, y, z
+	return tonumber(x) ~= nil and tonumber(y) ~= nil and tonumber(z) ~= nil, x, y, z
 end
 
 function Editor:OpenConstantSetWindow(node, x, y, type)
