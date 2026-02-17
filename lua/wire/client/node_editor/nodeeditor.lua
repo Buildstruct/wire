@@ -1006,7 +1006,7 @@ function Editor:ClosestPointOnBezier(gx, gy, x1, y1, x2, y2, flipStart, flipEnd,
 
         local dx = gx - bx
         local dy = gy - by
-        local dist = dx * dx + dy * dy -- без sqrt, только для сравнения
+        local dist = dx * dx + dy * dy -- with no sqrt, just to compare
 
         if dist < bestDist then
             bestDist = dist
