@@ -643,12 +643,13 @@ function Editor:GetWaypointSelectionKey(connectionKey, waypointIndex)
 	return connectionKey .. "_wp" .. tostring(waypointIndex)
 end
 
-function Editor:DrawBezierCurve(x1, y1, x2, y2, color, segments)
+function Editor:DrawBezierCurve(x1, y1, x2, y2, color, segments, flipped)
 	segments = segments or 20
+	flipped = flipped or false
 
 	-- Calculate control points for smooth curve
 	local distance = math.sqrt((x2 - x1)^2 + (y2 - y1)^2)
-	local offsetX = math.min(distance * 0.5, 100)
+	local offsetX = math.min(distance * 0.5, 100) * (flipped and -1 or 1)
 
 	local cx1 = x1 + offsetX
 	local cy1 = y1
@@ -1711,7 +1712,7 @@ function Editor:Paint()
 			end
 			local sx, sy = self:PosToScr(x, y)
 			local mx, my = self:CursorPos()
-			self:DrawBezierCurve(sx, sy, mx, my + (inputNum - selectedPort) * self.GateSize * self.Zoom, FPGATypeColor[type])
+			self:DrawBezierCurve(sx, sy, mx, my + (inputNum - selectedPort) * self.GateSize * self.Zoom, FPGATypeColor[type], nil, self.DrawingFromInput)
 		end
 	end
 	-- selecting
