@@ -1289,6 +1289,8 @@ function Editor:OnKeyCodePressed(code)
 	local control = input.IsKeyDown(KEY_LCONTROL) or input.IsKeyDown(KEY_RCONTROL)
 
 	if control then
+		self:OnShortcut(code)
+
 		if code == KEY_C then
 			--Copy
 			if self.SelectedNodeCount > 0 then
