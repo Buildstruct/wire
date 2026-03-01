@@ -26,7 +26,7 @@ duplicator.RegisterEntityModifier( "WireName", SetName )
 function TOOL:LeftClick(trace)
 	if (not trace.Entity:IsValid()) then return end
 	if (CLIENT) then return end
-	if (not trace.Entity.IsWire) then return end
+	--if (not trace.Entity.IsWire) then return end
 
 	local name = self:GetClientInfo("name")
 
