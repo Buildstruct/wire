@@ -23,6 +23,13 @@ local canEditVariable = WireLib.CanEditVariable
 local sun = ents.FindByClass("env_sun")[1] -- used for sunDirection()
 local trailedEntsAmount = {};
 
+local BSA
+local function is_cloak(instance, self)
+	BSA = BSA or _G.BSA
+	if not BSA then return false end
+	return BSA.Players.IsCloakedFrom(self, instance.player)
+end
+
 hook.Add("InitPostEntity","sunent",function()
 	sun = ents.FindByClass("env_sun")[1]
 	timer.Simple(0,function() -- make sure we have a sun first
@@ -203,31 +210,37 @@ __e2setcost(5) -- temporary
 
 e2function vector entity:pos()
 	if not IsValid(this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
+	if is_cloak(self, this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
 	return this:GetPos()
 end
 
 e2function vector entity:forward()
 	if not IsValid(this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
+	if is_cloak(self, this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
 	return this:GetForward()
 end
 
 e2function vector entity:right()
 	if not IsValid(this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
+	if is_cloak(self, this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
 	return this:GetRight()
 end
 
 e2function vector entity:up()
 	if not IsValid(this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
+	if is_cloak(self, this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
 	return this:GetUp()
 end
 
 e2function vector entity:vel()
 	if not IsValid(this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
+	if is_cloak(self, this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
 	return this:GetVelocity()
 end
 
 e2function vector entity:velL()
 	if not IsValid(this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
+	if is_cloak(self, this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
 	return this:WorldToLocal(this:GetVelocity() + this:GetPos())
 end
 
@@ -235,11 +248,13 @@ end
 e2function vector entity:velAtPoint(vector worldPosition)
 	local physobj = this:GetPhysicsObject()
 	if not IsValid(this) or not IsValid(physobj) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
+	if is_cloak(self, this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
 	return physobj:GetVelocityAtPoint(worldPosition)
 end
 
 e2function angle entity:angVel()
 	if not validPhysics(this) then return self:throw("Invalid entity!", Angle(0, 0, 0)) end
+	if is_cloak(self, this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
 	local phys = this:GetPhysicsObject()
 	local vec = phys:GetAngleVelocity()
 	return Angle(vec.y, vec.z, vec.x)
@@ -248,6 +263,7 @@ end
 --- Returns a vector describing rotation axis, magnitude and sense given as the vector's direction, magnitude and orientation.
 e2function vector entity:angVelVector()
 	if not validPhysics(this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
+	if is_cloak(self, this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
 	local phys = this:GetPhysicsObject()
 	return phys:GetAngleVelocity()
 end
@@ -265,33 +281,39 @@ __e2setcost(15)
 
 e2function vector entity:toWorld(vector localPosition)
 	if not IsValid(this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
+	if is_cloak(self, this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
 	return this:LocalToWorld(localPosition)
 end
 
 e2function vector entity:toLocal(vector worldPosition)
 	if not IsValid(this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
+	if is_cloak(self, this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
 	return this:WorldToLocal(worldPosition)
 end
 
 e2function vector entity:toWorldAxis(vector localAxis)
 	if not IsValid(this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
+	if is_cloak(self, this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
 	return this:LocalToWorld(localAxis)-this:GetPos()
 end
 
 e2function vector entity:toLocalAxis(vector worldAxis)
 	if not IsValid(this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
+	if is_cloak(self, this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
 	return this:WorldToLocal(worldAxis+this:GetPos())
 end
 
 --- Transforms from an angle local to <this> to a world angle.
 e2function angle entity:toWorld(angle localAngle)
 	if not IsValid(this) then return self:throw("Invalid entity!", Angle(0, 0, 0)) end
+	if is_cloak(self, this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
 	return this:LocalToWorldAngles(localAngle)
 end
 
 --- Transforms from a world angle to an angle local to <this>.
 e2function angle entity:toLocal(angle worldAngle)
 	if not IsValid(this) then return self:throw("Invalid entity!", Angle(0, 0, 0)) end
+	if is_cloak(self, this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
 	return this:WorldToLocalAngles(worldAngle)
 end
 
@@ -322,6 +344,7 @@ __e2setcost(15)
 
 e2function number entity:bearing(vector pos)
 	if not IsValid(this) then return self:throw("Invalid entity!", 0) end
+	if is_cloak(self, this) then return self:throw("Invalid entity!", 0) end
 
 	pos = this:WorldToLocal(pos)
 
@@ -331,6 +354,7 @@ end
 --- Returns the elevation (pitch) from <this> to <pos>
 e2function number entity:elevation(vector pos)
 	if not IsValid(this) then return self:throw("Invalid entity!", 0) end
+	if is_cloak(self, this) then return self:throw("Invalid entity!", 0) end
 
 	pos = this:WorldToLocal(pos)
 
@@ -342,6 +366,7 @@ end
 --- Returns the elevation (pitch) and bearing (yaw) from <this> to <pos>
 e2function angle entity:heading(vector pos)
 	if not IsValid(this) then return self:throw("Invalid entity!", Angle(0, 0, 0)) end
+	if is_cloak(self, this) then return self:throw("Invalid entity!", Angle(0, 0, 0)) end
 
 	pos = this:WorldToLocal(pos)
 
@@ -514,6 +539,7 @@ end
 
 e2function angle entity:angles()
 	if not IsValid(this) then return self:throw("Invalid entity!", Angle(0, 0, 0)) end
+	if is_cloak(self, this) then return self:throw("Invalid entity!", Angle(0, 0, 0)) end
 	local ang = this:GetAngles()
 	return Angle(ang.p, ang.y, ang.r)
 end
@@ -856,6 +882,7 @@ end
 -- Returns the rotated entity's min world-axis-aligned bounding box corner
 e2function vector entity:aabbWorldMin()
 	if not IsValid(this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
+	if is_cloak(self, this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
 	local ret, _ = this:WorldSpaceAABB()
 	return ret or Vector(0, 0, 0)
 end
@@ -863,6 +890,7 @@ end
 -- Returns the rotated entity's max world-axis-aligned bounding box corner
 e2function vector entity:aabbWorldMax()
 	if not IsValid(this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
+	if is_cloak(self, this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
 	local _, ret = this:WorldSpaceAABB()
 	return ret or Vector(0, 0, 0)
 end
@@ -870,6 +898,7 @@ end
 -- Returns the rotated entity's world-axis-aligned bounding box size
 e2function vector entity:aabbWorldSize()
 	if not IsValid(this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
+	if is_cloak(self, this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
 	local ret, ret2 = this:WorldSpaceAABB()
 	ret = ret or Vector(0,0,0)
 	ret2 = ret2 or Vector(0,0,0)
@@ -1114,6 +1143,7 @@ end
 --- Returns <this>'s attachment position associated with <attachmentID>
 e2function vector entity:attachmentPos(attachmentID)
 	if not IsValid(this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
+	if is_cloak(self, this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
 	local attachment = this:GetAttachment(attachmentID)
 	if not attachment then return Vector(0, 0, 0) end
 	return attachment.Pos
@@ -1122,6 +1152,7 @@ end
 --- Returns <this>'s attachment angle associated with <attachmentID>
 e2function angle entity:attachmentAng(attachmentID)
 	if not IsValid(this) then return self:throw("Invalid entity!", Angle(0, 0, 0)) end
+	if is_cloak(self, this) then return self:throw("Invalid entity!", Angle(0, 0, 0)) end
 	local attachment = this:GetAttachment(attachmentID)
 	if not attachment then return Angle(0, 0, 0) end
 	local ang = attachment.Ang
@@ -1131,6 +1162,7 @@ end
 --- Same as <this>:attachmentPos(entity:lookupAttachment(<attachmentName>))
 e2function vector entity:attachmentPos(string attachmentName)
 	if not IsValid(this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
+	if is_cloak(self, this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
 	local attachment = this:GetAttachment(this:LookupAttachment(attachmentName))
 	if not attachment then return Vector(0, 0, 0) end
 	return attachment.Pos
@@ -1139,6 +1171,7 @@ end
 --- Same as <this>:attachmentAng(entity:lookupAttachment(<attachmentName>))
 e2function angle entity:attachmentAng(string attachmentName)
 	if not IsValid(this) then return self:throw("Invalid entity!", Angle(0, 0, 0)) end
+	if is_cloak(self, this) then return self:throw("Invalid entity!", Angle(0, 0, 0)) end
 	local attachment = this:GetAttachment(this:LookupAttachment(attachmentName))
 	if not attachment then return Angle(0, 0, 0) end
 	local ang = attachment.Ang
@@ -1164,6 +1197,7 @@ __e2setcost(15)
 
 e2function vector entity:nearestPoint( vector point )
 	if not IsValid(this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
+	if is_cloak(self, this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
 	return this:NearestPoint(point)
 end
 

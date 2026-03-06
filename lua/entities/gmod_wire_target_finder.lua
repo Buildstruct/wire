@@ -5,6 +5,13 @@ ENT.WireDebugName = "Target Finder"
 
 if CLIENT then return end -- No more client
 
+local BSA
+local function is_cloak(owner, self)
+	BSA = BSA or _G.BSA
+	if not BSA then return false end
+	return BSA.Players.IsCloakedFrom(self, owner)
+end
+
 function ENT:Initialize()
 	self:PhysicsInit( SOLID_VPHYSICS )
 	self:SetMoveType( MOVETYPE_VPHYSICS )
@@ -251,6 +258,7 @@ end
 local function CheckPlayers(self, contact)
 	if self.NoTargetOwner and self:GetPlayer() == contact then return false end
 	if not isOneOf(contact:GetName(), self.PlayerName, self.CaseSen) then return false end
+	if is_cloak(self:GetPlayer(), contact) then return false end
 
 	-- Check if the player's steamid/steamid64 matches the SteamIDs
 	if self.SteamName:Trim() ~= "" then
