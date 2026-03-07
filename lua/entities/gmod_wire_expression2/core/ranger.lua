@@ -24,8 +24,12 @@ E2Lib.RegisterExtension("ranger", true, "Lets E2 chips trace rays and check for 
 -- Main function --
 -------------------
 
-
-
+local BSA
+local function is_cloak(instance, self)
+	BSA = BSA or _G.BSA
+	if not BSA then return false end
+	return BSA.Players.IsCloakedFrom(self, instance.player)
+end
 
 local function ResetRanger(self)
 	local data = self.data
@@ -310,6 +314,7 @@ __e2setcost(20) -- temporary
 e2function ranger entity:eyeTrace()
 	if not IsValid(this) then return nil end
 	if not this:IsPlayer() then return nil end
+	if is_cloak(self, this) then return nil end
 	local ret = this:GetEyeTraceNoCursor()
 	ret.RealStartPos = this:GetShootPos()
 	return ret
@@ -317,6 +322,7 @@ end
 
 e2function ranger entity:eyeTraceCursor()
 	if not IsValid(this) or not this:IsPlayer() then return nil end
+	if is_cloak(self, this) then return nil end
 	local ret = this:GetEyeTrace()
 	ret.RealStartPos = this:GetShootPos()
 	return ret

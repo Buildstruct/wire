@@ -2,6 +2,13 @@
 	Player-Entity support
 ------------------------------------------------------------------------------]]
 
+local BSA
+local function is_cloak(instance, self)
+	BSA = BSA or _G.BSA
+	if not BSA then return false end
+	return BSA.Players.IsCloakedFrom(self, instance.player)
+end
+
 local IsValid = IsValid
 
 local spawnAlert = {}
@@ -65,17 +72,20 @@ __e2setcost(8)
 e2function vector entity:shootPos()
 	if not IsValid(this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
 	if not this:IsPlayer() and not this:IsNPC() then return self:throw("Expected a Player or NPC in shootPos", Vector(0, 0, 0)) end
+	if is_cloak(self, this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
 	return this:GetShootPos()
 end
 
 e2function vector entity:eye()
 	if not IsValid(this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
+	if is_cloak(self, this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
 	return this:IsPlayer() and this:GetAimVector() or this:GetForward()
 end
 
 --- Returns an angle describing player <this>'s view angles.
 e2function angle entity:eyeAngles()
 	if not IsValid(this) then return self:throw("Invalid entity!", Angle(0, 0, 0)) end
+	if is_cloak(self, this) then return self:throw("Invalid entity!", Angle(0, 0, 0)) end
 	return this:EyeAngles()
 end
 
@@ -83,6 +93,7 @@ end
 e2function angle entity:eyeAnglesVehicle()
 	if not IsValid(this) then return self:throw("Invalid entity!", Angle(0, 0, 0)) end
 	if not this:IsPlayer() then return self:throw("Expected a Player but got an Entity!", Angle(0, 0, 0)) end
+	if is_cloak(self, this) then return self:throw("Invalid entity!", Angle(0, 0, 0)) end
 	return this:LocalEyeAngles()
 end
 
@@ -760,21 +771,21 @@ end
 e2function entity entity:aimEntity()
 	if not IsValid(this) then return self:throw("Invalid entity!", NULL) end
 	if not this:IsPlayer() then return self:throw("Expected a Player, got Entity", NULL) end
-
+	if is_cloak(self, this) then return self:throw("Invalid entity!", NULL) end
 	return this:GetEyeTraceNoCursor().Entity
 end
 
 e2function vector entity:aimPos()
 	if not IsValid(this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
 	if not this:IsPlayer() then return self:throw("Expected a Player, got Entity", Vector(0, 0, 0)) end
-
+	if is_cloak(self, this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
 	return this:GetEyeTraceNoCursor().HitPos
 end
 
 e2function vector entity:aimNormal()
 	if not IsValid(this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
 	if not this:IsPlayer() then return self:throw("Expected a Player, got Entity", Vector(0, 0, 0)) end
-
+	if is_cloak(self, this) then return self:throw("Invalid entity!", Vector(0, 0, 0)) end
 	return this:GetEyeTraceNoCursor().HitNormal
 end
 
@@ -787,7 +798,7 @@ end)
 e2function bone entity:aimBone()
 	if not IsValid(this) then return self:throw("Invalid entity!", nil) end
 	if not this:IsPlayer() then return self:throw("Expected a Player, got Entity", nil) end
-
+	if is_cloak(self, this) then return self:throw("Invalid entity!", nil) end
 	local trace = this:GetEyeTraceNoCursor()
 	local ent = trace.Entity
 	if not IsValid(ent) then return nil end

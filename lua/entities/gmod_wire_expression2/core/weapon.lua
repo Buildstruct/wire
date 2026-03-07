@@ -5,6 +5,13 @@
 local CanTool = WireLib.CanTool
 local isFriend = E2Lib.isFriend
 
+local BSA
+local function is_cloak(instance, self)
+	BSA = BSA or _G.BSA
+	if not BSA then return false end
+	return BSA.Players.IsCloakedFrom(self, instance.player)
+end
+
 local setAmmoCVar = CreateConVar("wire_expression2_weapon_ammo_set_enable", 0, FCVAR_ARCHIVE, "Whether or not to allow E2s to set ammo for weapons and players")
 local giveAmmoCVar = CreateConVar("wire_expression2_weapon_ammo_give_enable", 0, FCVAR_ARCHIVE, "Whether or not to allow E2s to give ammo to players")
 local giveWeaponCVar = CreateConVar("wire_expression2_weapon_give_enable", 0, FCVAR_ARCHIVE, "Whether or not to allow E2s to give weapons to players")
@@ -16,7 +23,7 @@ __e2setcost(2) -- temporary
 e2function entity entity:weapon()
 	if not IsValid(this) then return self:throw("Invalid entity!", NULL) end
 	if not this:IsPlayer() and not this:IsNPC() then return self:throw("Expected a Player or NPC but got Entity", NULL) end
-
+	if is_cloak(self, this) then return self:throw("Invalid entity!", NULL) end
 	return this:GetActiveWeapon()
 end
 
@@ -24,7 +31,7 @@ end
 e2function entity entity:weapon(string weaponclassname)
 	if not IsValid(this) then return self:throw("Invalid entity!", NULL) end
 	if not this:IsPlayer() and not this:IsNPC() then return self:throw("Expected a Player or NPC but got Entity", NULL) end
-
+	if is_cloak(self, this) then return self:throw("Invalid entity!", NULL) end
 	return this:GetWeapon(weaponclassname)
 end
 
@@ -32,7 +39,7 @@ end
 e2function number entity:hasWeapon(string classname)
 	if not IsValid(this) then return self:throw("Invalid entity!", 0) end
 	if not this:IsPlayer() then return self:throw("Expected a Player but got Entity", 0) end
-
+	if is_cloak(self, this) then return self:throw("Invalid entity!", NULL) end
 	return this:HasWeapon(classname) and 1 or 0
 end
 
@@ -40,6 +47,7 @@ end
 e2function array entity:weapons()
 	if not IsValid(this) then return {} end
 	if not this:IsPlayer() then return {} end
+	if is_cloak(self, this) then return {} end
 	return this:GetWeapons()
 end
 
@@ -125,6 +133,7 @@ end
 e2function string entity:tool()
 	if not IsValid(this) then return "" end
 	if not this:IsPlayer() then return "" end
+	if is_cloak(self, this) then return "" end
 
 	local weapon = this:GetActiveWeapon()
 	if not IsValid(weapon) then return "" end
@@ -148,13 +157,13 @@ end
 
 e2function entity entity:giveWeapon(string classname)
 	if not checkGive(self, this, classname) then return NULL end
-
+	if is_cloak(self, this) then return NULL end
 	return this:Give(classname)
 end
 
 e2function entity entity:giveWeapon(string classname, noAmmo)
 	if not checkGive(self, this, classname) then return NULL end
-
+	if is_cloak(self, this) then return NULL end
 	return this:Give(classname, noAmmo ~= 0)
 end
 
